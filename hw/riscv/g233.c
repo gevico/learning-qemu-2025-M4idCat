@@ -18,10 +18,16 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "hw/boards.h"
+#include "hw/qdev-core.h"
+#include "hw/riscv/riscv_hart.h"
 #include "qemu/osdep.h"
 #include "qemu/cutils.h"
 #include "qemu/error-report.h"
 #include "qapi/error.h"
+#include "qemu/typedefs.h"
+#include "qom/object.h"
+#include "system/address-spaces.h"
 #include "system/system.h"
 #include "system/memory.h"
 #include "target/riscv/cpu.h"
@@ -34,8 +40,7 @@
 #include "hw/intc/sifive_plic.h"
 #include "hw/misc/unimp.h"
 #include "hw/char/pl011.h"
-
-/* TODO: you need include some header files */
+#include "hw/gpio/sifive_gpio.h"
 
 static const MemMapEntry g233_memmap[] = {
     [G233_DEV_MROM] =     {     0x1000,     0x2000 },
@@ -53,6 +58,15 @@ static void g233_soc_init(Object *obj)
      * You can add more devices here(e.g. cpu, gpio)
      * Attention: The cpu resetvec is 0x1004
      */
+    MachineState *ms = MACHINE(qdev_get_machine());
+    G233SoCState *s = RISCV_G233_SOC(obj);
+
+    /* Initialize CPU array */
+    object_initialize_child(obj, "cpus", &s->cpus, TYPE_RISCV_HART_ARRAY);
+    object_property_set_int(OBJECT(&s->cpus), "num-harts", ms->smp.cpus, &error_abort);
+    object_property_set_int(OBJECT(&s->cpus), "reset-vector", 0x1004, &error_abort);
+    object_initialize_child(obj, "riscv.g233.gpio0", &s->gpio, TYPE_SIFIVE_GPIO);
+
 }
 
 static void g233_soc_realize(DeviceState *dev, Error **errp)
@@ -160,10 +174,13 @@ static void g233_machine_init(MachineState *machine)
     }
 
     /* Initialize SoC */
+    object_initialize_child(OBJECT(machine), "soc", &s->soc, 
+                           TYPE_RISCV_G233_SOC);
+    qdev_realize(DEVICE(&s->soc), NULL, &error_fatal);
 
 
     /* Data Memory(DDR RAM) */
-
+    memory_region_add_subregion(get_system_memory(), memmap[G233_DEV_DRAM].base, machine->ram);
     /* Mask ROM reset vector */
     uint32_t reset_vec[5];
     reset_vec[1] = 0x0010029b; /* 0x1004: addiw  t0, zero, 1 */
