@@ -1173,6 +1173,7 @@ static uint32_t opcode_at(DisasContextBase *dcbase, target_ulong pc)
 
 /* Include insn module translation function */
 #include "insn_trans/trans_rvi.c.inc"
+#include "insn_trans/trans_dma.c.inc"
 #include "insn_trans/trans_rvm.c.inc"
 #include "insn_trans/trans_rva.c.inc"
 #include "insn_trans/trans_rvf.c.inc"
@@ -1205,6 +1206,7 @@ static uint32_t opcode_at(DisasContextBase *dcbase, target_ulong pc)
 
 /* Include decoders for factored-out extensions */
 #include "decode-XVentanaCondOps.c.inc"
+
 
 /* The specification allows for longer insns, but not supported by qemu. */
 #define MAX_INSN_LEN  4

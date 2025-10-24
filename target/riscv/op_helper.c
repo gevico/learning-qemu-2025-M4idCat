@@ -27,6 +27,7 @@
 #include "exec/helper-proto.h"
 #include "exec/tlb-flags.h"
 #include "trace.h"
+#include <stdint.h>
 
 /* Exceptions processing helpers */
 G_NORETURN void riscv_raise_exception(CPURISCVState *env,
@@ -133,6 +134,29 @@ target_ulong helper_csrrw_i128(CPURISCVState *env, int csr,
     return int128_getlo(rv);
 }
 
+void helper_dma(CPURISCVState *env, 
+                target_ulong dst_addr,target_ulong src_addr,
+                target_ulong grain_size)
+{
+    int M, N;
+    M = N = 8 << grain_size;
+
+    // get return address
+    uintptr_t ra = GETPC();
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+                target_ulong src_offset = (j * N + i) * 4;
+                uint32_t value = cpu_ldl_data_ra(env, src_addr + src_offset,
+                                            GETPC());
+                target_ulong dst_offset = (i * M + j) * 4;  // 修复: j 而不是 i
+
+            
+                cpu_stl_data_ra(env, dst_addr + dst_offset, value, ra);
+
+        }
+    }
+
+}
 
 /*
  * check_zicbo_envcfg
@@ -691,6 +715,7 @@ void helper_hyp_hsv_d(CPURISCVState *env, target_ulong addr, target_ulong val)
 
     cpu_stq_mmu(env, adjust_addr_virt(env, addr), val, oi, ra);
 }
+
 
 /*
  * TODO: These implementations are not quite correct.  They perform the
