@@ -34,6 +34,7 @@
 #include "hw/intc/sifive_plic.h"
 #include "hw/misc/unimp.h"
 #include "hw/char/pl011.h"
+#include "qom/object.h"
 
 /* TODO: you need include some header files */
 
@@ -53,6 +54,16 @@ static void g233_soc_init(Object *obj)
      * You can add more devices here(e.g. cpu, gpio)
      * Attention: The cpu resetvec is 0x1004
      */
+    MachineState *ms = MACHINE(qdev_get_machine());
+    G233SoCState *s = RISCV_G233_SOC(obj);
+    
+    object_initialize_child(obj, "cpus", &s->cpus, TYPE_RISCV_HART_ARRAY);
+    object_property_set_int(OBJECT(&s->cpus), "num-harts", ms->smp.cpus,
+                            &error_abort);
+    object_property_set_int(OBJECT(&s->cpus), "resetvec", 0x1004, &error_abort);
+    object_initialize_child(obj, "riscv.g233.gpio0", &s->gpio,
+                            TYPE_SIFIVE_GPIO);
+
 }
 
 static void g233_soc_realize(DeviceState *dev, Error **errp)
@@ -63,7 +74,9 @@ static void g233_soc_realize(DeviceState *dev, Error **errp)
     const MemMapEntry *memmap = g233_memmap;
 
     /* CPUs realize */
-
+    object_property_set_str(OBJECT(&s->cpus), "cpu-type", ms->cpu_type,
+                            &error_abort);
+    sysbus_realize(SYS_BUS_DEVICE(&s->cpus), &error_fatal);
     /* Mask ROM */
     memory_region_init_rom(&s->mask_rom, OBJECT(dev), "riscv.g233.mrom",
                            memmap[G233_DEV_MROM].size, &error_fatal);
@@ -160,7 +173,14 @@ static void g233_machine_init(MachineState *machine)
     }
 
     /* Initialize SoC */
+    object_initialize_child(OBJECT(machine), "soc", &s->soc,
+                            TYPE_RISCV_G233_SOC);
+    qdev_realize(DEVICE(&s->soc), NULL, &error_fatal);
 
+    /* Data Memory(DDR RAM) */
+    memory_region_add_subregion(get_system_memory(),
+                                memmap[G233_DEV_DRAM].base,
+                                machine->ram);
 
     /* Data Memory(DDR RAM) */
 
