@@ -1,4 +1,5 @@
 /* Exceptions */
+#include "exec/helper-head.h.inc"
 DEF_HELPER_2(raise_exception, noreturn, env, i32)
 
 /* Floating Point - rounding mode */
@@ -1286,3 +1287,6 @@ DEF_HELPER_4(vsm4r_vv, void, ptr, ptr, env, i32)
 DEF_HELPER_4(vsm4r_vs, void, ptr, ptr, env, i32)
 
 DEF_HELPER_4(dma, void, env, tl, tl, tl)
+DEF_HELPER_4(sort, void, env, tl, tl, tl)
+DEF_HELPER_4(crush, void, env, tl, tl, tl)
+DEF_HELPER_4(expand, void, env, tl, tl, tl)

@@ -134,6 +134,10 @@ target_ulong helper_csrrw_i128(CPURISCVState *env, int csr,
     return int128_getlo(rv);
 }
 
+/*
+ *   The learning qemu class
+ *   Add some instruction on the g233 board
+ */
 void helper_dma(CPURISCVState *env, 
                 target_ulong dst_addr,target_ulong src_addr,
                 target_ulong grain_size)
@@ -147,8 +151,8 @@ void helper_dma(CPURISCVState *env,
         for (int j = 0; j < M; j++) {
                 target_ulong src_offset = (j * N + i) * 4;
                 uint32_t value = cpu_ldl_data_ra(env, src_addr + src_offset,
-                                            GETPC());
-                target_ulong dst_offset = (i * M + j) * 4;  // 修复: j 而不是 i
+                                            ra);
+                target_ulong dst_offset = (i * M + j) * 4;  
 
             
                 cpu_stl_data_ra(env, dst_addr + dst_offset, value, ra);
@@ -158,6 +162,67 @@ void helper_dma(CPURISCVState *env,
 
 }
 
+void helper_expand(CPURISCVState *env, target_ulong dst_addr,
+                   target_ulong src_addr, target_ulong count)
+{
+    uintptr_t ra = GETPC();
+
+    target_ulong out_idx = 0;
+    for (target_ulong i = 0; i < count; i++) {
+        uint8_t v = cpu_ldub_data_ra(env, src_addr + i, ra);
+        uint8_t low = v & 0xf;
+        uint8_t high = (v >> 4) & 0xf;
+        cpu_stb_data_ra(env, dst_addr + out_idx, low, ra);
+        out_idx++;
+        cpu_stb_data_ra(env, dst_addr + out_idx, high, ra);
+        out_idx++;
+    }
+
+}
+
+void helper_sort(CPURISCVState *env, 
+                target_ulong src_addr,target_ulong size,
+                target_ulong involve_size)
+{
+    uintptr_t ra = GETPC();
+
+    target_ulong n = (involve_size <= size)? involve_size:size;
+    for(target_ulong i = 0; i < n; i++)
+    {
+        for(target_ulong j = 0; j < n-i-1; j++)
+        {
+            target_ulong addr_j = src_addr + j * 4;
+            target_ulong addr_j1 = src_addr + (j+1) * 4;
+
+            int32_t val_j = (int32_t)cpu_ldl_data_ra(env, addr_j, ra);
+            int32_t val_j1 = (int32_t)cpu_ldl_data_ra(env, addr_j1, ra);
+            if (val_j > val_j1) {
+                cpu_stl_data_ra(env, addr_j, (uint32_t)val_j1, ra);
+                cpu_stl_data_ra(env, addr_j1, (uint32_t)val_j, ra);
+            }
+        }
+
+    }
+    
+
+}
+
+void helper_crush(CPURISCVState *env, target_ulong dst_addr,
+                  target_ulong src_addr, target_ulong count)
+{
+    uintptr_t ra = GETPC();
+    target_ulong out_idx = 0;
+    for (target_ulong i = 0; i < count; i += 2) {
+        uint8_t a = cpu_ldub_data_ra(env, src_addr + i, ra);
+        uint8_t b = 0;
+        if (i + 1 < count) {
+            b = cpu_ldub_data_ra(env, src_addr + i + 1, ra);
+        }
+        uint8_t out = (a & 0xf) | ((b & 0xf) << 4);
+        cpu_stb_data_ra(env, dst_addr + out_idx, out, ra);
+        out_idx++;
+    }
+}
 /*
  * check_zicbo_envcfg
  *

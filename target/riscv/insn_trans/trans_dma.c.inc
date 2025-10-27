@@ -1,7 +1,7 @@
 /*
  * RISC-V translation routines for the DMA instruction (G233 Board)
  *
- * Copyright (c) 2025 Learning QEMU
+ * Copyright (c) 2025 M4idCat
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */

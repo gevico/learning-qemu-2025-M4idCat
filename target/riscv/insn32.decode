@@ -1069,3 +1069,9 @@ amocas_h    00101 . . ..... ..... 001 ..... 0101111 @atom_st
 
 # Custom DMA instruction for G233 Board
 dma       0000110  ..... ..... 110 ..... 1111011 @r
+# Custom SORT instruction: sort low 4 bits of bytes
+sort      0010110  ..... ..... 110 ..... 1111011 @r
+# Custom CRUSH instruction: pack low 4 bits of bytes pairwise 
+crush     0100110  ..... ..... 110 ..... 1111011 @r
+# Custom EXPAND instruction: split each byte into two 4-bit values stored as bytes 
+expand    0110110  ..... ..... 110 ..... 1111011 @r
