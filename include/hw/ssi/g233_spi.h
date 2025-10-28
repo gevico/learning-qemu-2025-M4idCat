@@ -21,8 +21,8 @@
 /* SR bits */
 #define G233_SPI_SR_RXNE   (1u << 0)  /* Receive not empty */
 #define G233_SPI_SR_TXE    (1u << 1)  /* Transmit buffer empty */
-#define G233_SPI_SR_UDR    (1u << 3)  /* Underrun flag */
-#define G233_SPI_SR_OVR    (1u << 6)  /* Overrun flag */
+#define G233_SPI_SR_UDR    (1u << 2)  /* Underrun flag       ← 改成 bit2 */
+#define G233_SPI_SR_OVR    (1u << 3)  /* Overrun flag        ← 改成 bit3 */
 #define G233_SPI_SR_BSY    (1u << 7)  /* Busy */
 
 /* CSCTRL bits */

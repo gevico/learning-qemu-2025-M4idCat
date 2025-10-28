@@ -123,7 +123,10 @@ static void g233_spi_write(void *opaque, hwaddr addr, uint64_t val64, unsigned s
             g233_spi_update_irq(s);
             return;
         case G233_SPI_SR:
-            /* status is read-only for this minimal model */
+            /* 支持对错误位（OVR/UDR）的写1清除（W1C）；其余位只读 */
+            uint32_t w1c = val & (G233_SPI_SR_OVR | G233_SPI_SR_UDR);
+            s->sr &= ~w1c;
+            g233_spi_update_irq(s);
             return;
         case G233_SPI_DR: {
             s->dr = val & 0xFF;
