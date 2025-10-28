@@ -35,6 +35,9 @@
 #include "hw/misc/unimp.h"
 #include "hw/char/pl011.h"
 #include "qom/object.h"
+#include "hw/ssi/g233_spi.h"
+#include "hw/ssi/ssi.h"
+#include "hw/qdev-properties.h"
 
 /* TODO: you need include some header files */
 
@@ -131,6 +134,34 @@ static void g233_soc_realize(DeviceState *dev, Error **errp)
     /* SiFive.PWM0 */
     create_unimplemented_device("riscv.g233.pwm0",
         memmap[G233_DEV_PWM0].base, memmap[G233_DEV_PWM0].size);
+    /* G233 SPI0 at 0x10018000 */
+    DeviceState *spi = qdev_new(TYPE_G233_SPI);
+    sysbus_realize(SYS_BUS_DEVICE(spi), &error_fatal);
+    sysbus_mmio_map(SYS_BUS_DEVICE(spi), 0, 0x10018000);
+
+    /* Get its SSI bus */
+    SSIBus *ssibus = (SSIBus *)qdev_get_child_bus(DEVICE(spi), "ssi");
+
+    /* Create a Winbond W25X16 SPI NOR on CS0 */
+    DeviceState *flash = qdev_new("w25x16");
+    DeviceState *flash1 = qdev_new("w25x32");
+    /* Set CS index to 0 (so it listens to ssi-gpio-cs[0]) */
+    qdev_prop_set_uint8(flash, "cs", 0);
+    qdev_prop_set_uint8(flash1, "cs", 1);
+    /* Realize it on the SPI bus */
+    ssi_realize_and_unref(flash, ssibus, &error_fatal);
+    ssi_realize_and_unref(flash1, ssibus, &error_fatal);
+    /* Wire controller CS0 output to flash's CS input (low-active) */
+    qemu_irq flash_cs_in = qdev_get_gpio_in_named(flash, SSI_GPIO_CS, 0);
+    qemu_irq flash1_cs_in = qdev_get_gpio_in_named(flash1, SSI_GPIO_CS, 0);
+    qdev_connect_gpio_out(DEVICE(spi), 0, flash_cs_in);
+    qdev_connect_gpio_out(DEVICE(spi), 1, flash1_cs_in);
+
+    /* Wire SPI IRQ (unnamed-gpio-out[2]) to PLIC source */
+    qdev_connect_gpio_out(DEVICE(spi), 2,
+    qdev_get_gpio_in(DEVICE(s->plic), G233_SPI0_IRQ));
+
+
 
 }
 
@@ -204,6 +235,7 @@ static void g233_machine_init(MachineState *machine)
                           memmap[G233_DEV_DRAM].base,
                           false, NULL);
     }
+
 }
 
 static void g233_machine_instance_init(Object *obj)

@@ -68,6 +68,7 @@ enum {
 enum {
     G233_UART0_IRQ  = 1,
     G233_PWM0_IRQ   = 2,
+    G233_SPI0_IRQ   = 3,
     G233_GPIO0_IRQ0 = 8
 };
 
